@@ -1,7 +1,9 @@
 package logrustash
 
 import (
+	"fmt"
 	"io"
+	"path/filepath"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -120,6 +122,18 @@ func DefaultFormatter(fields logrus.Fields) logrus.Formatter {
 // Note: the given entry is copied and not changed during the formatting process.
 func (f LogstashFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	ne := copyEntry(e, f.Fields)
+
+	if e.HasCaller() {
+		funcVal := e.Caller.Function
+		fileVal := fmt.Sprintf("%s:%d", e.Caller.File, e.Caller.Line)
+		if funcVal != "" {
+			ne.Data["func"] = filepath.Base(funcVal)
+		}
+		if fileVal != "" {
+			ne.Data["file"] = fileVal
+		}
+	}
+
 	dataBytes, err := f.Formatter.Format(ne)
 	releaseEntry(ne)
 	return dataBytes, err
